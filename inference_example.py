@@ -103,17 +103,33 @@ def main():
         # 单文件处理
         print(f"正在推理: {args.input}")
         try:
+            # 确保输出目录存在
+            output_dir = Path(args.output)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            
             if args.show:
                 # 显示结果
-                result = inferencer(args.input, return_vis=True)
-                # 注意：实际显示需要根据 inferencer 的实现调整
+                result_generator = inferencer(args.input, show=True)
+                # 遍历生成器以处理所有帧
+                for result in result_generator:
+                    pass
                 print("推理完成（显示模式）")
             else:
-                # 保存结果
-                result = inferencer(args.input, vis_out_dir=args.output)
+                # 保存结果 - 对于视频需要使用生成器并遍历所有结果
+                result_generator = inferencer(args.input, vis_out_dir=str(output_dir))
+                # 遍历生成器以处理所有帧（视频需要处理所有帧）
+                frame_count = 0
+                for result in result_generator:
+                    frame_count += 1
+                    if frame_count % 30 == 0:
+                        print(f"  已处理 {frame_count} 帧...")
+                
+                print(f"✓ 推理完成，共处理 {frame_count} 帧")
                 print(f"✓ 结果已保存到: {args.output}")
         except Exception as e:
             print(f"✗ 推理失败: {e}")
+            import traceback
+            traceback.print_exc()
             
     elif input_path.is_dir() and args.batch:
         # 批量处理
@@ -128,10 +144,17 @@ def main():
         
         print(f"找到 {len(image_files)} 张图片")
         
+        # 确保输出目录存在
+        output_dir = Path(args.output)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        
         for i, img_path in enumerate(image_files, 1):
             print(f"[{i}/{len(image_files)}] 处理: {img_path.name}")
             try:
-                inferencer(str(img_path), vis_out_dir=args.output)
+                # 对于图片，也需要遍历生成器
+                result_generator = inferencer(str(img_path), vis_out_dir=str(output_dir))
+                for result in result_generator:
+                    pass
             except Exception as e:
                 print(f"  ✗ 处理失败: {e}")
         
